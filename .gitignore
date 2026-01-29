@@ -1,0 +1,20 @@
+# Entorno virtual
+venv/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Archivos locales
+.env
+.env.*
+
+# Audio
+uploads/
+*.wav
+
+# IDEs
+.vscode/
+.idea/
