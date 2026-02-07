@@ -1,15 +1,31 @@
+import os
+from datetime import datetime
+
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.services.audio_storage import save_and_convert_audio
+from app.services.transcription import transcribe_audio
 
 router = APIRouter(prefix="/audio", tags=["audio"])
 
 
 @router.post("/upload")
-def upload_audio(file: UploadFile = File(...)):
-    if not file.filename.lower().endswith((".wav", ".mp3")):
-        raise HTTPException(status_code=400, detail="Solo se permiten archivos .wav o .mp3")
+async def upload_audio(file: UploadFile = File(...)):
+    initial_time = datetime.now()
+    if not file.filename.lower().endswith((".wav", ".mp3", ".m4a", ".ogg")):
+        raise HTTPException(status_code=400, detail="Formato no compatible")
 
     wav_path = save_and_convert_audio(file)
 
-    return {"message": "Audio recibido y convertido", "filename": wav_path.name}
+    try:
+        transcription = transcribe_audio(wav_path)
+        final_time = datetime.now()
+
+        return {
+            "message": "Transcripción completada",
+            "filename": os.path.basename(wav_path),
+            "transcription": transcription,
+            "time": (final_time - initial_time).total_seconds(),
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error en el servidor: {str(e)}")
