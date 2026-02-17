@@ -12,7 +12,7 @@ router = APIRouter(prefix="/audio", tags=["audio"])
 @router.post("/upload")
 async def upload_audio(file: UploadFile = File(...)):
     initial_time = datetime.now()
-    if not file.filename.lower().endswith((".wav", ".mp3", ".m4a", ".ogg")):
+    if not file.filename.lower().endswith((".wav", ".mp3", ".m4a", ".ogg", ".webm")):
         raise HTTPException(status_code=400, detail="Formato no compatible")
 
     wav_path = save_and_convert_audio(file)

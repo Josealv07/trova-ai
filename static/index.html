@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Trova Coach - Grabación</title>
+    <style>
+        .recording { color: red; font-weight: bold; }
+        #status { margin-top: 10px; font-style: italic; }
+    </style>
+</head>
+<body>
+    <h1>🎤 Grabación de Voz</h1>
+    <button id="recordBtn">Iniciar Grabación</button>
+    <button id="stopBtn" disabled>Detener y Enviar</button>
+
+    <div id="status">Listo para grabar.</div>
+    <hr>
+    <h3>Transcripción:</h3>
+    <p id="transcriptionText">Aquí aparecerá el resultado...</p>
+
+    <script>
+        let mediaRecorder;
+        let audioChunks = [];
+
+        const recordBtn = document.getElementById('recordBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const status = document.getElementById('status');
+        const resultDisplay = document.getElementById('transcriptionText');
+
+        recordBtn.onclick = async () => {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            mediaRecorder = new MediaRecorder(stream);
+
+            mediaRecorder.ondataavailable = (event) => {
+                audioChunks.push(event.data);
+            };
+
+            mediaRecorder.onstart = () => {
+                status.innerText = "Grabando...";
+                status.classList.add('recording');
+                audioChunks = [];
+            };
+
+            mediaRecorder.start();
+            recordBtn.disabled = true;
+            stopBtn.disabled = false;
+        };
+
+        stopBtn.onclick = () => {
+            mediaRecorder.stop();
+            status.innerText = "Procesando audio...";
+            status.classList.remove('recording');
+
+            mediaRecorder.onstop = async () => {
+                // Creamos el archivo de audio (formato webm/ogg por defecto en navegadores)
+                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+
+                // Lo preparamos para el endpoint de FastAPI
+                const formData = new FormData();
+                formData.append('file', audioBlob, 'grabacion.webm');
+
+                try {
+                    const response = await fetch('http://localhost:8000/audio/upload', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const data = await response.json();
+                    resultDisplay.innerText = data.transcription;
+                    status.innerText = `Completado en ${data.time.toFixed(2)} segundos.`;
+                } catch (error) {
+                    console.error("Error:", error);
+                    status.innerText = "Error al enviar el audio.";
+                }
+
+                recordBtn.disabled = false;
+                stopBtn.disabled = true;
+            };
+        };
+    </script>
+</body>
+</html>
