@@ -4,6 +4,7 @@ from datetime import datetime
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.services.audio_storage import save_and_convert_audio
+from app.services.judge import judge_trova
 from app.services.transcription import transcribe_audio
 
 router = APIRouter(prefix="/audio", tags=["audio"])
@@ -19,12 +20,15 @@ async def upload_audio(file: UploadFile = File(...)):
 
     try:
         transcription = transcribe_audio(wav_path)
+        veredict = judge_trova(transcription)
+
         final_time = datetime.now()
 
         return {
             "message": "Transcripción completada",
             "filename": os.path.basename(wav_path),
             "transcription": transcription,
+            "evaluation": veredict,
             "time": (final_time - initial_time).total_seconds(),
         }
     except Exception as e:

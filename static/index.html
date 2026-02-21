@@ -2,21 +2,131 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Trova Coach - Grabación</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trova AI Coach - Jurado Técnico</title>
     <style>
-        .recording { color: red; font-weight: bold; }
-        #status { margin-top: 10px; font-style: italic; }
+        :root {
+            --bg: #121212;
+            --card: #1e1e1e;
+            --primary: #f1c40f;
+            --success: #2ecc71;
+            --error: #e74c3c;
+            --text: #ffffff;
+            --muted: #aaaaaa;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 20px;
+            margin: 0;
+        }
+
+        .container { width: 100%; max-width: 1100px; text-align: center; }
+
+        h1 { font-size: 3.5rem; color: var(--primary); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
+        .subtitle { font-size: 1.2rem; color: var(--muted); margin-bottom: 30px; }
+
+        .controls { margin-bottom: 40px; }
+
+        button {
+            padding: 18px 40px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            border: none;
+            border-radius: 50px;
+            margin: 0 15px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        #recordBtn { background-color: var(--success); color: white; }
+        #stopBtn { background-color: var(--error); color: white; }
+        button:hover:not(:disabled) { transform: translateY(-3px); filter: brightness(1.1); }
+        button:disabled { background-color: #444; opacity: 0.5; cursor: not-allowed; }
+
+        #status { font-size: 1.4rem; height: 40px; margin-top: 10px; }
+        .recording-pulse { color: var(--error); animation: pulse 1.5s infinite; font-weight: bold; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
+
+        /* Panel del Jurado */
+        #juryBoard {
+            background-color: var(--card);
+            border-radius: 25px;
+            padding: 50px;
+            margin-top: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+            display: none;
+            border: 1px solid #333;
+        }
+
+        .verso-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 25px;
+            margin: 15px 0;
+            border-radius: 15px;
+            background: rgba(255,255,255,0.05);
+            text-align: left;
+        }
+
+        .perfecto { border-left: 12px solid var(--success); }
+        .incorrecto { border-left: 12px solid var(--error); }
+
+        .verso-texto { font-size: 2.2rem; font-weight: 600; display: block; }
+        .verso-detalle { font-size: 1.1rem; color: var(--muted); margin-top: 8px; }
+
+        .metrica-badge {
+            font-size: 1.8rem;
+            padding: 10px 25px;
+            border-radius: 15px;
+            background: #333;
+            font-weight: bold;
+            min-width: 140px;
+            text-align: center;
+        }
+
+        .footer-evaluacion {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #333;
+        }
+
+        #rimaInfo { font-size: 1.6rem; color: var(--primary); margin-bottom: 15px; }
+        #paisaComment { font-size: 1.8rem; font-style: italic; color: #fff; line-height: 1.4; }
+        #finalScore { font-size: 4rem; margin-top: 20px; }
     </style>
 </head>
 <body>
-    <h1>🎤 Grabación de Voz</h1>
-    <button id="recordBtn">Iniciar Grabación</button>
-    <button id="stopBtn" disabled>Detener y Enviar</button>
 
-    <div id="status">Listo para grabar.</div>
-    <hr>
-    <h3>Transcripción:</h3>
-    <p id="transcriptionText">Aquí aparecerá el resultado...</p>
+    <div class="container">
+        <h1>🎤 TROVA AI COACH</h1>
+        <div class="subtitle">Análisis Técnico de Octosílabos en Tiempo Real</div>
+
+        <div class="controls">
+            <button id="recordBtn">Iniciar Tanda</button>
+            <button id="stopBtn" disabled>Calificar Trovador</button>
+        </div>
+
+        <div id="status">Esperando al trovador...</div>
+
+        <div id="juryBoard">
+            <div id="versosContainer"></div>
+
+            <div class="footer-evaluacion">
+                <div id="rimaInfo"></div>
+                <p id="paisaComment"></p>
+                <div id="finalScore"></div>
+            </div>
+        </div>
+    </div>
 
     <script>
         let mediaRecorder;
@@ -25,20 +135,19 @@
         const recordBtn = document.getElementById('recordBtn');
         const stopBtn = document.getElementById('stopBtn');
         const status = document.getElementById('status');
-        const resultDisplay = document.getElementById('transcriptionText');
+        const juryBoard = document.getElementById('juryBoard');
+        const versosContainer = document.getElementById('versosContainer');
 
         recordBtn.onclick = async () => {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             mediaRecorder = new MediaRecorder(stream);
+            audioChunks = [];
 
-            mediaRecorder.ondataavailable = (event) => {
-                audioChunks.push(event.data);
-            };
+            mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
 
             mediaRecorder.onstart = () => {
-                status.innerText = "Grabando...";
-                status.classList.add('recording');
-                audioChunks = [];
+                status.innerHTML = '<span class="recording-pulse">🔴 ESCUCHANDO REPENTISMO...</span>';
+                juryBoard.style.display = 'none';
             };
 
             mediaRecorder.start();
@@ -48,16 +157,12 @@
 
         stopBtn.onclick = () => {
             mediaRecorder.stop();
-            status.innerText = "Procesando audio...";
-            status.classList.remove('recording');
+            status.innerText = "El jurado está deliberando...";
 
             mediaRecorder.onstop = async () => {
-                // Creamos el archivo de audio (formato webm/ogg por defecto en navegadores)
                 const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-
-                // Lo preparamos para el endpoint de FastAPI
                 const formData = new FormData();
-                formData.append('file', audioBlob, 'grabacion.webm');
+                formData.append('file', audioBlob, 'tanda.webm');
 
                 try {
                     const response = await fetch('http://localhost:8000/audio/upload', {
@@ -66,17 +171,60 @@
                     });
 
                     const data = await response.json();
-                    resultDisplay.innerText = data.transcription;
-                    status.innerText = `Completado en ${data.time.toFixed(2)} segundos.`;
+                    renderEvaluacion(data.evaluation);
+                    status.innerText = `Evaluación lista en ${data.time.toFixed(2)}s`;
                 } catch (error) {
-                    console.error("Error:", error);
-                    status.innerText = "Error al enviar el audio.";
+                    status.innerText = "⚠️ Error de conexión con el jurado.";
+                    console.error("Error completo:", error);
                 }
 
                 recordBtn.disabled = false;
                 stopBtn.disabled = true;
             };
         };
+
+        function renderEvaluacion(ev) {
+            versosContainer.innerHTML = '';
+            juryBoard.style.display = 'block';
+
+            // Navegamos la estructura del JSON enviada por el servidor
+            const estrofa = ev.analisis.estrofa;
+
+            estrofa.forEach((v) => {
+                // Regla de oro: Verso octosílabo (8 sílabas métricas)
+                const esOcto = v.metrica === 8;
+
+                const div = document.createElement('div');
+                div.className = `verso-row ${esOcto ? 'perfecto' : 'incorrecto'}`;
+
+                div.innerHTML = `
+                    <div>
+                        <span class="verso-texto">${v.texto}</span>
+                        <div class="verso-detalle">
+                            🧬 Sinalefas: ${v.sinalefas} | 🎯 Acento: ${v.acento_final} (${v.nota})
+                        </div>
+                    </div>
+                    <div class="metrica-badge">
+                        ${v.metrica} Sílabas ${esOcto ? '✅' : '❌'}
+                    </div>
+                `;
+                versosContainer.appendChild(div);
+            });
+
+            // Análisis de Rima (2do con 4to verso)
+            const rima = ev.analisis.rima;
+            document.getElementById('rimaInfo').innerHTML = `
+                <strong>Rima ${rima.tipo.toUpperCase()}:</strong> ${rima.observaciones}
+            `;
+
+            // Comentario Paisa y Conclusiones
+            const conclusion = ev.analisis.conclusiones;
+            document.getElementById('paisaComment').innerText = `"${conclusion.note_general || conclusion.nota_general}"`;
+
+            // Puntuación visual por estrellas
+            const stars = conclusion.rima_cumplida && conclusion.metrica_cumplida ? "⭐⭐⭐⭐⭐" : "⭐⭐⭐";
+            document.getElementById('finalScore').innerText = stars;
+        }
     </script>
 </body>
 </html>
