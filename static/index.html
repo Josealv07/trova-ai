@@ -2,229 +2,137 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trova AI Coach - Jurado Técnico</title>
+    <title>Trova Debugger - Pyverse Mode</title>
     <style>
-        :root {
-            --bg: #121212;
-            --card: #1e1e1e;
-            --primary: #f1c40f;
-            --success: #2ecc71;
-            --error: #e74c3c;
-            --text: #ffffff;
-            --muted: #aaaaaa;
-        }
+        :root { --bg: #f0f2f5; --ok: #27ae60; --error: #c0392b; }
+        body { font-family: 'Courier New', Courier, monospace; background: var(--bg); padding: 20px; color: #333; }
+        .container { max-width: 800px; margin: auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        
+        .controls { margin-bottom: 20px; display: flex; gap: 10px; justify-content: center; }
+        button { padding: 10px 20px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; }
+        #recordBtn { background: var(--ok); color: white; }
+        #stopBtn { background: var(--error); color: white; }
+        button:disabled { background: #ccc; }
 
-        body {
-            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 40px 20px;
-            margin: 0;
-        }
-
-        .container { width: 100%; max-width: 1100px; text-align: center; }
-
-        h1 { font-size: 3.5rem; color: var(--primary); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
-        .subtitle { font-size: 1.2rem; color: var(--muted); margin-bottom: 30px; }
-
-        .controls { margin-bottom: 40px; }
-
-        button {
-            padding: 18px 40px;
-            font-size: 1.5rem;
-            font-weight: bold;
-            cursor: pointer;
-            border: none;
-            border-radius: 50px;
-            margin: 0 15px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
-        }
-
-        #recordBtn { background-color: var(--success); color: white; }
-        #stopBtn { background-color: var(--error); color: white; }
-        button:hover:not(:disabled) { transform: translateY(-3px); filter: brightness(1.1); }
-        button:disabled { background-color: #444; opacity: 0.5; cursor: not-allowed; }
-
-        #status { font-size: 1.4rem; height: 40px; margin-top: 10px; }
-        .recording-pulse { color: var(--error); animation: pulse 1.5s infinite; font-weight: bold; }
-
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.3; } 100% { opacity: 1; } }
-
-        /* Panel del Jurado */
-        #juryBoard {
-            background-color: var(--card);
-            border-radius: 25px;
-            padding: 50px;
-            margin-top: 20px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.6);
-            display: none;
-            border: 1px solid #333;
-        }
-
-        .verso-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 25px;
-            margin: 15px 0;
-            border-radius: 15px;
-            background: rgba(255,255,255,0.05);
-            text-align: left;
-        }
-
-        .perfecto { border-left: 12px solid var(--success); }
-        .incorrecto { border-left: 12px solid var(--error); }
-
-        .verso-texto { font-size: 2.2rem; font-weight: 600; display: block; }
-        .verso-detalle { font-size: 1.1rem; color: var(--muted); margin-top: 8px; }
-
-        .metrica-badge {
-            font-size: 1.8rem;
-            padding: 10px 25px;
-            border-radius: 15px;
-            background: #333;
-            font-weight: bold;
-            min-width: 140px;
-            text-align: center;
-        }
-
-        .footer-evaluacion {
-            margin-top: 40px;
-            padding-top: 30px;
-            border-top: 2px solid #333;
-        }
-
-        #rimaInfo { font-size: 1.6rem; color: var(--primary); margin-bottom: 15px; }
-        #paisaComment { font-size: 1.8rem; font-style: italic; color: #fff; line-height: 1.4; }
-        #finalScore { font-size: 4rem; margin-top: 20px; }
+        .analysis-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .analysis-table th, .analysis-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .analysis-table th { background: #f8f9fa; }
+        
+        .metric-badge { font-weight: bold; padding: 4px 8px; border-radius: 4px; display: inline-block; }
+        .is-8 { background: #d4edda; color: var(--ok); }
+        .is-not-8 { background: #f8d7da; color: var(--error); }
+        
+        .fonetica { color: #666; font-size: 0.9rem; display: block; margin-top: 4px; }
+        pre { background: #eee; padding: 10px; border-radius: 4px; white-space: pre-wrap; }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <h1>🎤 TROVA AI COACH</h1>
-        <div class="subtitle">Análisis Técnico de Octosílabos en Tiempo Real</div>
-
-        <div class="controls">
-            <button id="recordBtn">Iniciar Tanda</button>
-            <button id="stopBtn" disabled>Calificar Trovador</button>
-        </div>
-
-        <div id="status">Esperando al trovador...</div>
-
-        <div id="juryBoard">
-            <div id="versosContainer"></div>
-
-            <div class="footer-evaluacion">
-                <div id="rimaInfo"></div>
-                <p id="paisaComment"></p>
-                <div id="finalScore"></div>
-            </div>
-        </div>
+<div class="container">
+    <h2>🔬 Trova Metric Debugger</h2>
+    
+    <div class="controls">
+        <button id="recordBtn">Grabar</button>
+        <button id="stopBtn" disabled>Analizar</button>
     </div>
+    
+    <div id="status">Estado: Listo</div>
+    <hr>
 
-    <script>
-        let mediaRecorder;
-        let audioChunks = [];
+    <h3>Transcripción Bruta:</h3>
+    <pre id="rawText">Esperando audio...</pre>
 
-        const recordBtn = document.getElementById('recordBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const status = document.getElementById('status');
-        const juryBoard = document.getElementById('juryBoard');
-        const versosContainer = document.getElementById('versosContainer');
+    <h3>Análisis de Versos (Pyverse):</h3>
+    <table class="analysis-table">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Verso / Fonética</th>
+                <th>Métrica</th>
+                <th>Rima</th>
+            </tr>
+        </thead>
+        <tbody id="analysisBody">
+            </tbody>
+    </table>
+</div>
 
-        recordBtn.onclick = async () => {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
+<script>
+    let mediaRecorder;
+    let audioChunks = [];
 
-            mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+    const recordBtn = document.getElementById('recordBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const status = document.getElementById('status');
+    const rawText = document.getElementById('rawText');
+    const analysisBody = document.getElementById('analysisBody');
 
-            mediaRecorder.onstart = () => {
-                status.innerHTML = '<span class="recording-pulse">🔴 ESCUCHANDO REPENTISMO...</span>';
-                juryBoard.style.display = 'none';
-            };
+    recordBtn.onclick = async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        mediaRecorder = new MediaRecorder(stream);
+        audioChunks = [];
 
-            mediaRecorder.start();
+        mediaRecorder.onstart = () => {
+            status.innerText = "Estado: Grabando...";
             recordBtn.disabled = true;
             stopBtn.disabled = false;
         };
 
-        stopBtn.onclick = () => {
-            mediaRecorder.stop();
-            status.innerText = "El jurado está deliberando...";
+        mediaRecorder.ondataavailable = (e) => audioChunks.push(e.data);
+        mediaRecorder.start();
+    };
 
-            mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                const formData = new FormData();
-                formData.append('file', audioBlob, 'tanda.webm');
+    stopBtn.onclick = () => {
+        mediaRecorder.stop();
+        status.innerText = "Estado: Procesando...";
+        
+        mediaRecorder.onstop = async () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+            const formData = new FormData();
+            formData.append('file', audioBlob, 'tanda.webm');
 
-                try {
-                    const response = await fetch('http://localhost:8000/audio/upload', {
-                        method: 'POST',
-                        body: formData
-                    });
+            try {
+                const response = await fetch('http://localhost:8000/audio/upload', {
+                    method: 'POST',
+                    body: formData
+                });
 
-                    const data = await response.json();
-                    renderEvaluacion(data.evaluation);
-                    status.innerText = `Evaluación lista en ${data.time.toFixed(2)}s`;
-                } catch (error) {
-                    status.innerText = "⚠️ Error de conexión con el jurado.";
-                    console.error("Error completo:", error);
-                }
+                const data = await response.json();
+                rawText.innerText = data.transcription;
+                renderPyverse(data.evaluation);
+                status.innerText = `Estado: Completado en ${data.time.toFixed(2)}s`;
+            } catch (error) {
+                status.innerText = "Estado: Error en servidor";
+                console.error(error);
+            }
 
-                recordBtn.disabled = false;
-                stopBtn.disabled = true;
-            };
+            recordBtn.disabled = false;
+            stopBtn.disabled = true;
         };
+    };
 
-        function renderEvaluacion(ev) {
-            versosContainer.innerHTML = '';
-            juryBoard.style.display = 'block';
+    function renderPyverse(lista) {
+        analysisBody.innerHTML = '';
+        lista.forEach(v => {
+            const esOcto = v.metrica === 8;
+            const row = document.createElement('tr');
 
-            // Navegamos la estructura del JSON enviada por el servidor
-            const estrofa = ev.analisis.estrofa;
-
-            estrofa.forEach((v) => {
-                // Regla de oro: Verso octosílabo (8 sílabas métricas)
-                const esOcto = v.metrica === 8;
-
-                const div = document.createElement('div');
-                div.className = `verso-row ${esOcto ? 'perfecto' : 'incorrecto'}`;
-
-                div.innerHTML = `
-                    <div>
-                        <span class="verso-texto">${v.texto}</span>
-                        <div class="verso-detalle">
-                            🧬 Sinalefas: ${v.sinalefas} | 🎯 Acento: ${v.acento_final} (${v.nota})
-                        </div>
-                    </div>
-                    <div class="metrica-badge">
-                        ${v.metrica} Sílabas ${esOcto ? '✅' : '❌'}
-                    </div>
-                `;
-                versosContainer.appendChild(div);
-            });
-
-            // Análisis de Rima (2do con 4to verso)
-            const rima = ev.analisis.rima;
-            document.getElementById('rimaInfo').innerHTML = `
-                <strong>Rima ${rima.tipo.toUpperCase()}:</strong> ${rima.observaciones}
+            row.innerHTML = `
+                <td>${v.verso}</td>
+                <td>
+                    <strong>${v.texto}</strong>
+                    <span class="fonetica">Sílaba métrica: ${v.fonetica}</span>
+                </td>
+                <td>
+                    <span class="metric-badge ${esOcto ? 'is-8' : 'is-not-8'}">
+                        ${v.metrica}
+                    </span>
+                </td>
+                <td><small>${v.rima}</small></td>
             `;
-
-            // Comentario Paisa y Conclusiones
-            const conclusion = ev.analisis.conclusiones;
-            document.getElementById('paisaComment').innerText = `"${conclusion.note_general || conclusion.nota_general}"`;
-
-            // Puntuación visual por estrellas
-            const stars = conclusion.rima_cumplida && conclusion.metrica_cumplida ? "⭐⭐⭐⭐⭐" : "⭐⭐⭐";
-            document.getElementById('finalScore').innerText = stars;
-        }
-    </script>
+            analysisBody.appendChild(row);
+        });
+    }
+</script>
 </body>
 </html>

@@ -1,6 +1,7 @@
 import json
 
 from openai import OpenAI
+from pyverse import Pyverse
 
 from app.core.config import OPENAI_API_KEY
 
@@ -71,3 +72,50 @@ def judge_trova(text: str):
     except Exception as e:
         print(f"Error en el jurado: {e}")
         return {"error": "Fallo en la deliberación", "detalle": str(e)}
+
+
+def analizar_con_pyverse(transcription: str):
+    texto_limpio = " ".join(transcription) if isinstance(transcription, list) else transcription
+    palabras = texto_limpio.split()
+
+    analisis_retorno = []
+    buffer_verso = []
+    id_verso = 1
+
+    for palabra in palabras:
+        buffer_verso.append(palabra)
+        intento = " ".join(buffer_verso)
+
+        v = Pyverse(intento)
+
+        metrica_actual = v.count
+
+        if metrica_actual >= 8:
+            analisis_retorno.append(
+                {
+                    "verso": id_verso,
+                    "texto": intento,
+                    "metrica": metrica_actual,
+                    "fonetica": " - ".join(v.syllables),
+                    "acento": v.type_of_verse,
+                    "es_perfecto": metrica_actual == 8,
+                    "rima": v.consonant_rhyme,
+                }
+            )
+            buffer_verso = []
+            id_verso += 1
+
+    if buffer_verso:
+        resto = " ".join(buffer_verso)
+        v_final = Pyverse(resto)
+        analisis_retorno.append(
+            {
+                "verso": id_verso,
+                "texto": resto,
+                "metrica": v_final.count,
+                "fonetica": " - ".join(v_final.syllables),
+                "acento": v_final.type_of_verse,
+                "es_perfecto": v_final.count == 8,
+            }
+        )
+    return analisis_retorno

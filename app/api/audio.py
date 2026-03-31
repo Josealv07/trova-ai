@@ -4,14 +4,14 @@ from datetime import datetime
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.services.audio_storage import save_and_convert_audio
-from app.services.judge import judge_trova
+from app.services.judge import analizar_con_pyverse
 from app.services.transcription import transcribe_audio
 
 router = APIRouter(prefix="/audio", tags=["audio"])
 
 
 @router.post("/upload")
-async def upload_audio(file: UploadFile = File(...)):
+def upload_audio(file: UploadFile = File(...)):
     initial_time = datetime.now()
     if not file.filename.lower().endswith((".wav", ".mp3", ".m4a", ".ogg", ".webm")):
         raise HTTPException(status_code=400, detail="Formato no compatible")
@@ -20,8 +20,7 @@ async def upload_audio(file: UploadFile = File(...)):
 
     try:
         transcription = transcribe_audio(wav_path)
-        veredict = judge_trova(transcription)
-
+        veredict = analizar_con_pyverse(transcription)
         final_time = datetime.now()
 
         return {
